@@ -1,0 +1,20 @@
+{
+  "name": "chatbots",
+  "version": "1.0.0",
+  "main": "Projeto24701.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "google-spreadsheet": "^4.1.4",
+    "googleapis": "^148.0.0",
+    "nodemailer": "^7.0.3",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.28.0"
+  }
+}
