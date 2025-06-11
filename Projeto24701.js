@@ -51,6 +51,33 @@ try {
 
 }
 
+// --- INÍCIO: Função para buscar dados do Google Sheets ---
+/**
+ * Busca dados de uma planilha Google Sheets.
+ * @param {string} spreadsheetId O ID da planilha.
+ * @param {string} range O intervalo a ser lido (ex: 'Sheet1!A1:B10').
+ * @param {import('whatsapp-web.js').Message} msg O objeto da mensagem original para responder em caso de erro.
+ * @returns {Promise<Array<Array<string>> | null>} Uma promessa que resolve com os dados da planilha ou null em caso de erro.
+ */
+async function fetchSheetData(spreadsheetId, range, msg) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${process.env.GOOGLE_API_KEY_SHEETS}`;
+    try {
+        const response = await axios.get(url);
+        if (response.data && response.data.values) {
+            return response.data.values;
+        } else {
+            console.error('Nenhum dado encontrado na planilha ou formato inesperado:', response.data);
+            if (msg) await client.sendMessage(msg.from, "Desculpe, não consegui encontrar os dados solicitados (formato inesperado). Tente mais tarde.");
+            return null;
+        }
+    } catch (error) {
+        console.error('Erro ao buscar dados do Google Sheets:', error.response ? error.response.data : error.message);
+        if (msg) await client.sendMessage(msg.from, "Ocorreu um erro ao buscar os dados da planilha. Por favor, tente novamente mais tarde.");
+        return null;
+    }
+}
+// --- FIM: Função para buscar dados do Google Sheets ---
+
 
 // --- VERIFICAÇÃO PÓS-INICIALIZAÇÃO ---
 if (sheets) {
@@ -154,7 +181,7 @@ client.on('qr', qr => {
 
 
 client.on('ready', () => {
-    console.log('Tudo certo! WhatsApp conectado.');
+    console.log('Whatsapp conectado com sucesso! Vamos Trabalhar! 🚀');
 });
 
 client.initialize();
@@ -179,15 +206,16 @@ client.on('message', async msg => {
     const userName = contact.pushname || "Usuário";
     const messageText = msg.body.trim().toLowerCase();
     
-    if (messageText === "*") {
+    if (messageText === "Menu" || messageText === "menu" ) {
         console.log("Comando * recebido de", msg.from);
         if (emAtendimentoHumano.has(msg.from)) {
             emAtendimentoHumano.delete(msg.from);
-            delete userNextAction[msg.from];
+            userNextAction[msg.from];
             delete userData[msg.from];
 
             console.log("✅ Usuário removido do atendimento humano:", msg.from);
             await client.sendMessage(msg.from, `✅ Atendimento humano encerrado. Você pode continuar a conversa normalmente.`);
+            
         } else {
             console.log("ℹ️ Usuário não estava em atendimento humano:", msg.from);
             await client.sendMessage(msg.from, `ℹ️ Você não está em atendimento humano no momento.`);
@@ -261,42 +289,135 @@ Sou seu assistente virtual. Como posso ajudar?
 
             await chat.sendStateTyping();
             await delay(3000);
-            await client.sendMessage(msg.from, `📌 *Para qual empresa você deseja essa automação?* \ntambém atendemos para pessoa física. 👇`);
+            await client.sendMessage(msg.from, `💬 Tem mais!\n Vou te mostrar uma consulta de produtos como exemplo!`);
 
-            userNextAction[msg.from] = 'COLETAR_EMPRESA';
-            userData[msg.from] = {
-                nome: userName,
-                telefone: msg.from.replace('@c.us', ''),
-                qualificacao: '7'
-            };
-            return;
+            await chat.sendStateTyping();
+            await delay(3000);
+            await client.sendMessage(msg.from, `💬 Posso seguir?
+                 1️⃣ Sim
+                 2️⃣ Não, quero voltar ao MENU`);
+            userNextAction[msg.from] = 'ESCOLHER_OPCAO_MENU_2'; 
+            return;            
         }
-        
+          
 
         if (choice === '3') {
             await client.sendMessage(msg.from, `🔧 Certo! Encaminhando você para o suporte técnico. Aguarde um momento...`);
             await enviarAlertaEmail(userName, "O cliente solicitou suporte técnico.");
             await enviarAlertaTelegram(`🛠️ ${userName} solicitou suporte técnico.`);
-
-            emAtendimentoHumano.add(msg.from); // bloqueia o cliente para atendimento humano
-            delete userNextAction[msg.from];   // remove qualquer ação pendente
-            console.log(`🛠️ Usuário ${msg.from} encaminhado para suporte técnico.`);
+                emAtendimentoHumano.add(msg.from); // bloqueia o cliente para atendimento humano
+                delete userNextAction[msg.from];   // remove qualquer ação pendente
+                console.log(`🛠️ Usuário ${msg.from} encaminhado para suporte técnico.`);
             await chat.sendStateTyping();
             await delay(4000);
             await client.sendMessage(msg.from, `👨‍💻 Você está agora em atendimento humano. Um de nossos atendentes irá te responder em breve!`);
+            await chat.sendStateTyping();
+            await delay(2000);
+            await client.sendMessage(msg.from, `👨‍💻 ou digite "MENU" para voltar!`);
+            
         return;
         }
 // CORREÇÃO = FLUXO DEVE PARAR NO CASO DE ESCOLHA DA OPÇÃO 3 
         await client.sendMessage(msg.from, `❌ Opção inválida. Por favor, digite 1, 2 ou 3.`);
         return;
     }
+     
+    if (userNextAction[msg.from] === 'ESCOLHER_OPCAO_MENU_2') {
+        const choicePosConsulta = msg.body.trim();
 
+        if (choicePosConsulta === '1') {
+            await chat.sendStateTyping();
+            await client.sendMessage(msg.from, "Por favor, digite o nome do produto qualquer que você gostaria de consultar, por exemplo medicamentos:");
+            userNextAction[msg.from] = 'consultar_produto'; 
+            return;
+            // Volta para a ação de consultar produto
+        } 
+        if (choicePosConsulta === '2') {
+            await chat.sendStateTyping();
+            await delay(1000);
+
+            const menuText = `Olá, ${userName.split(" ")[0]}! 👋
+Sou seu assistente virtual. Como posso ajudar?
+
+*Escolha uma opção digitando o número:*
+1️⃣ Quero comprar agora a automação!
+2️⃣ Saber mais sobre a automação!
+3️⃣ Já sou usuário, falar com Suporte Técnico!`;
+
+            await client.sendMessage(msg.from, menuText);
+            userNextAction[msg.from] = "ESCOLHER_OPCAO_MENU"; // Volta para o menu principal
+            return;
+        } 
+        if (choicePosConsulta === '3') {
+            await chat.sendStateTyping();
+            await delay(1000);
+            await client.sendMessage(msg.from, "Para qual empresa você deseja essa automação? 👇");
+            userNextAction[msg.from] = 'COLETAR_EMPRESA';
+            userData[msg.from] = {
+                nome: userName,
+                telefone: msg.from.replace('@c.us', ''),
+                qualificacao: '10'
+            };
+            return;
+        }
+                
+        else {
+            await chat.sendStateTyping();
+            await delay(1000);
+            await client.sendMessage(msg.from, "Opção inválida. Por favor, digite 1 para consultar outro produto, 2 para voltar ao menu principal ou 3 para fazer seu cadastro.");
+            // Mantém a ação 'pos_consulta_produto' para o usuário tentar novamente
+        }
+        
+    
+    }
+
+    // CONSULTAR PRODUTO
+    if (userNextAction[msg.from] === 'consultar_produto' && msg.body) {
+        const nomeProdutoPesquisado = msg.body.trim().toLowerCase(); // Obtém o nome do produto digitado pelo usuário e converte para lowercase para comparação
+
+        await chat.sendStateTyping();
+        await delay(3000);
+        await client.sendMessage(msg.from, `Buscando informações sobre "${nomeProdutoPesquisado}"... 🔎`);
+
+        const sheetData = await fetchSheetData(process.env.GOOGLE_SHEET_ID, process.env.RANGE_LISTA_PRODUTOS, msg);
+
+        if (sheetData && sheetData.length > 0) {
+            const produtosEncontrados = sheetData.filter(row => (row[0] || '').toLowerCase().includes(nomeProdutoPesquisado));
+
+            if (produtosEncontrados.length > 0) {
+                let responseText = "*Resultados da Busca:*\n\n";
+                produtosEncontrados.forEach(produto => {
+                    const nome = produto[0] || 'Produto';
+                    const preco = produto[1] ? `: ${produto[1]}` : '';
+                    responseText += `*${nome}*${preco}\n`;
+                });
+                await delay(1000);
+                await chat.sendStateTyping();
+                await delay(3000);
+                await client.sendMessage(msg.from, responseText.trim());
+            } else {
+                await client.sendMessage(msg.from, `Nenhum produto encontrado com o termo "${nomeProdutoPesquisado}". 😔`);
+            }
+        } else if (sheetData) {
+            await client.sendMessage(msg.from, "A Lista de Produtos está vazia no momento. 🤔");
+        }
+
+        // Envia a nova ação após a busca
+        await delay(5000);
+        await client.sendMessage(msg.from, `\nEssa busca foi feita em uma planilha do google automaticamente, você poderá alterar essa planilha que o robô estará sempre atualizado com seu estoque!! 
+            \n1️⃣ Consultar outro produto
+            \n2️⃣ Voltar ao menu principal 
+            \n3️⃣ Fazer meu cadastro`);
+        userNextAction[msg.from] = 'ESCOLHER_OPCAO_MENU_2'; // Define a próxima ação esperada
+        return;
+    }
 
     // ETAPA: COLETAR DADOS DO USUÁRIO
     if (userNextAction[msg.from] === 'COLETAR_EMPRESA') {
         userData[msg.from].empresa = msg.body.trim();
         userNextAction[msg.from] = 'COLETAR_RAMO';
-
+        await chat.sendStateTyping();
+        await delay(2000);
         await client.sendMessage(msg.from, `Legal! Agora me diga o ramo da empresa. (por exemplo: Autopeças, Importados, Medicamentos, Cosméticos) 🏢`);
         return;
     }
@@ -304,7 +425,8 @@ Sou seu assistente virtual. Como posso ajudar?
     if (userNextAction[msg.from] === 'COLETAR_RAMO') {
         userData[msg.from].ramo = msg.body.trim();
         userNextAction[msg.from] = 'COLETAR_EMAIL';
-
+        await chat.sendStateTyping();
+        await delay(2000);
         await client.sendMessage(msg.from, `Qual o seu melhor e-mail para contato? 📧`);
         return;
     }
@@ -327,6 +449,8 @@ Sou seu assistente virtual. Como posso ajudar?
         delete userData[msg.from];
         return;
     }
+
+    
 });
 
 
@@ -365,10 +489,19 @@ async function adicionarNaPlanilha(dados) {
   }
 }
 
-if (messageText === 'sair' || messageText === 'menu') {
-    delete userNextAction[msg.from];
-    delete userData[msg.from];
-    await client.sendMessage(msg.from, '🔁 Voltando ao menu principal...');
-    return;
+// ENCERRAR ATENDIMENTO HUMANO
+async function encerrarAtendimento(numero) {
+    if (emAtendimentoHumano.has(numero)) {
+        emAtendimentoHumano.delete(numero);
+        delete userNextAction[numero];
+        delete userData[numero];
+
+        console.log("✅ Atendimento encerrado para:", numero);
+        await client.sendMessage(numero, `✅ Atendimento humano encerrado. Você pode continuar a conversa normalmente.`);
+    } else {
+        console.log("ℹ️ O número não estava em atendimento humano:", numero);
+        await client.sendMessage(numero, `ℹ️ Você não está em atendimento humano no momento.`);
+    }
 }
+
 process.stdin.resume(); // Mantém o script ativo
