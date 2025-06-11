@@ -9,23 +9,16 @@ const emAtendimentoHumano = new Set();
 // CARREGA AS VARIAVEIS DE AMBIENTE
 require('dotenv').config();
 
-// VERIFICAÇÃO DE VARIÁVEIS DE AMBIENTE
-
-//console.log('NODEMAILER_USER:', process.env.NODEMAILER_USER);
-//console.log('TELEGRAM_BOT_TOKEN (first 5 chars):', process.env.TELEGRAM_BOT_TOKEN ? process.env.TELEGRAM_BOT_TOKEN.substring(0, 5) + '...' : 'Not loaded');
-//console.log('GOOGLE_KEY_FILE_PATH:', process.env.GOOGLE_KEY_FILE_PATH);
-
-
 // CONFIG GOOGLE SHEETS
 const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const RANGE_LEADS = 'Leads!A1:G';
 
 
 // AUTENTICAÇÃO DO GOOGLE SHEETS
-let auth; // Use let para que possamos atribuir dentro de um try/catch se necessário
-let sheets; // Use let para que possamos atribuir dentro de um try/catch se necessário
+let auth; 
+let sheets; 
 const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-const range = 'Leads!A1:G'; // Mantendo consistente com a função adicionarNaPlanilha
+const range = 'Leads!A1:G'; 
 
 try {
   // Construindo o caminho do arquivo de chave de forma mais robusta
@@ -51,16 +44,11 @@ try {
   sheets = google.sheets({ version: 'v4', auth });
   console.log('✅ Cliente do Google Sheets inicializado.');
 
-  // Teste de conexão: Tente listar as planilhas (opcional, mas bom para depuração)
-  // const metadata = await sheets.spreadsheets.get({ spreadsheetId: spreadsheetId });
-  // console.log('Metadata da planilha carregada:', metadata.data.properties.title);
-
 
 } catch (error) {
   console.error('❌ ERRO CRÍTICO na inicialização do Google Sheets:', error.message);
   console.error('Verifique GOOGLE_KEY_FILE_PATH e permissões do arquivo JSON.');
-  // Você pode optar por sair do processo aqui se a funcionalidade de planilhas for essencial
-  // process.exit(1);
+
 }
 
 
@@ -70,9 +58,6 @@ if (sheets) {
 } else {
     console.error('Variável "sheets" NÃO está definida após a inicialização. Verifique os erros acima.');
 }
-
-
-
 
 // TRANSPORTE DE EMAIL
 const transporter = nodemailer.createTransport({
@@ -98,7 +83,6 @@ const enviarAlertaEmail = async (nome, mensagemAdicional = "") => {
         console.error('❌ Erro ao enviar e-mail:', error);
     }
 };
-
 
 // ENVIAR ALERTA NO TELEGRAM
 const enviarAlertaTelegram = async (mensagem) => {
