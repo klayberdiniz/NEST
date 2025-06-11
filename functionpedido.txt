@@ -1,0 +1,12 @@
+
+função:
+    const pedido = {}
+    realiza busca de produtos e preços da planilha Google Sheets
+    pergunta se deseja adicionar o produto encontrado ao pedido
+    mostrar duas opções: adicionar outro item ou finalizar o pedido
+    apos finalizar o pedido, mostrar o resumo do pedido com os produtos e preços
+    mostrar opções: confirmar e enviar pedido,  cancelar o pedido
+    se confirmar, enviar o pedido formatado para impressora padrão local
+    se cancelar, retornar ao menu principal
+async function buscarProdutos() {
+    

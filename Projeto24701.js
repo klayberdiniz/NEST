@@ -179,11 +179,6 @@ client.on('message', async msg => {
     const userName = contact.pushname || "Usuário";
     const messageText = msg.body.trim().toLowerCase();
     
-     if (emAtendimentoHumano.has(msg.from)) {
-        console.log(`🛑 Usuário em atendimento humano (${msg.from}) enviou: "${msg.body}".`);
-        return;
-    }
-
     if (messageText === "*") {
         console.log("Comando * recebido de", msg.from);
         if (emAtendimentoHumano.has(msg.from)) {
@@ -199,6 +194,13 @@ client.on('message', async msg => {
         }
         return;
     }
+
+    if (emAtendimentoHumano.has(msg.from)) {
+        console.log(`🛑 Usuário em atendimento humano (${msg.from}) enviou: "${msg.body}".`);
+        return;
+    }
+
+    
 // Se o usuário não estiver em nenhum fluxo, mostrar o menu com qualquer mensagem recebida
     if (!userNextAction[msg.from]) {
         await delay(2000);
@@ -361,5 +363,12 @@ async function adicionarNaPlanilha(dados) {
         console.error('Mensagem Detalhada da API do Google:', error.errors);
     }
   }
+}
+
+if (messageText === 'sair' || messageText === 'menu') {
+    delete userNextAction[msg.from];
+    delete userData[msg.from];
+    await client.sendMessage(msg.from, '🔁 Voltando ao menu principal...');
+    return;
 }
 process.stdin.resume(); // Mantém o script ativo
